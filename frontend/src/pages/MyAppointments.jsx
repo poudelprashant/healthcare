@@ -89,6 +89,24 @@ const MyAppointments = () => {
     }
   };
 
+  const paywithKhalti = async (appointmentId) => {
+    try {
+      const response = await axios.post(
+        backendUrl + "/api/user/payment-khalti",
+        { appointmentId },
+        { headers: { token } }
+      );
+      if (response.status === 200) {
+        window.location.href = response.data.data.payment_url; // Redirect to Khalti payment page
+      } else {
+        console.error("Error initiating Khalti payment:", response);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error(error.message);
+    }
+  };
+
   useEffect(() => {
     if (token) {
       getUserAppointments();
@@ -161,7 +179,7 @@ const MyAppointments = () => {
                 !item.isCompleted &&
                 payment === item._id && (
                   <button
-                    onClick={() => appointmentStripe(item._id)}
+                    onClick={() => paywithKhalti(item._id)}
                     className="text-[#696969] sm:min-w-48 py-2 border rounded hover:bg-gray-100 hover:text-white transition-all duration-300 flex items-center justify-center"
                   >
                     <img

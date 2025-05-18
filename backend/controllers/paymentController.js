@@ -1,50 +1,27 @@
-const axios = require("axios");
-const Order = require("../../models/Order");
-const Course = require("../../models/Course"); 
-const StudentCourses = require("../../models/StudentCourses");
-
+import axios from "axios";
+import appointmentModel from "../models/appointmentModel.js";
 const initiateKhalti = async (req, res) => {
-  const {
-    amount,
-    userName,
-    userEmail,
-    userId,
-    courseImage,
-    courseId,
-    courseTitle,
-    instructorName,
-    instructorId,
-  } = req.body;
+  const { appointmentId } = req.body;
+  const appointmentData = await appointmentModel.findById(appointmentId);
 
-  const newlyCreatedCourseOrder = new Order({
-    userId,
-    userName,
-    userEmail,
-    orderStatus: "pending",
-    paymentMethod: "khalti",
-    paymentStatus: "initiated",
-    orderDate: new Date(),
-    instructorId,
-    instructorName,
-    courseImage,
-    courseTitle,
-    courseId,
-    coursePricing: parseFloat(amount),
-  });
-
-  await newlyCreatedCourseOrder.save();
+  if (!appointmentData || appointmentData.cancelled) {
+    return res.json({
+      success: false,
+      message: "Appointment Cancelled or not found",
+    });
+  }
 
   const formData = {
     return_url: `${
-      process.env.BACKEND_URL || "http://localhost:5000"
-    }/payment/khalti/verify`,
-    website_url: process.env.FRONTEND_URL || "http://localhost:3000",
-    amount: amount * 100,
-    purchase_order_id: newlyCreatedCourseOrder._id,
-    purchase_order_name: courseTitle,
+      process.env.BACKEND_URL || "http://localhost:4000"
+    }/api/user/verifyKhalti`,
+    website_url: process.env.FRONTEND_URL || "http://localhost:5173",
+    amount: appointmentData.amount * 100,
+    purchase_order_id: appointmentData._id,
+    purchase_order_name: "Doctor Appointment",
     customer_info: {
-      name: userName,
-      email: userEmail,
+      name: appointmentData.userData.name,
+      email: appointmentData.userData.email,
     },
   };
 
@@ -80,7 +57,6 @@ const verifyKhalti = async (req, res) => {
     const { pidx, purchase_order_id, amount, message, transaction_id, status } =
       req.query;
 
-
     if (message) {
       return res.status(400).json({
         success: false,
@@ -93,7 +69,7 @@ const verifyKhalti = async (req, res) => {
       "Content-Type": "application/json",
     };
 
-    const response = await axios.post(
+    await axios.post(
       "https://a.khalti.com/api/v2/epayment/lookup/",
       { pidx },
       { headers }
@@ -102,71 +78,28 @@ const verifyKhalti = async (req, res) => {
     req.transaction_uuid = purchase_order_id;
     req.transaction_id = transaction_id;
 
-    const order = await Order.findOne({ _id: purchase_order_id });
-    if (!order) {
+    const appointmentData = await appointmentModel.findById(purchase_order_id);
+    if (!appointmentData) {
       return res.status(404).json({
         success: false,
-        message: "Order not found!",
+        message: "Appointment not found.",
       });
     }
-
-    const updatedStatus =
-      status === "Completed"
-        ? "confirmed"
-        : status === "Expired"
-        ? "expired"
-        : status === "User canceled"
-        ? "canceled"
-        : "failed";
-
-    await Order.updateOne(
-      { _id: purchase_order_id },
-      {
-        $set: {
-          orderStatus: updatedStatus,
-          paymentStatus: status === "Completed" ? "paid" : "pending",
-        },
-      }
-    );
-
-    //  Added: Update StudentCourses & Course if payment was successful
-    if (status === "Completed") {
-      const courseData = {
-        courseId: order.courseId,
-        title: order.courseTitle,
-        instructorId: order.instructorId,
-        instructorName: order.instructorName,
-        dateOfPurchase: new Date(),
-        courseImage: order.courseImage,
-      };
-
-      let studentCourses = await StudentCourses.findOne({
-        userId: order.userId,
+    if (appointmentData.payment) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment already verified.",
       });
-
-      if (studentCourses) {
-        if (!Array.isArray(studentCourses.courses)) {
-          studentCourses.courses = [];
-        }
-        studentCourses.courses.push(courseData);
-        await studentCourses.save();
-      } else {
-        const newStudentCourses = new StudentCourses({
-          userId: order.userId,
-          courses: [courseData],
-        });
-        await newStudentCourses.save();
-      }
-
-      await Course.findByIdAndUpdate(order.courseId, {
-        $addToSet: {
-          students: {
-            studentId: order.userId,
-            studentName: order.userName,
-            studentEmail: order.userEmail,
-            paidAmount: order.coursePricing,
-          },
-        },
+    }
+    if (appointmentData.cancelled) {
+      return res.status(400).json({
+        success: false,
+        message: "Appointment Cancelled.",
+      });
+    }
+    if (appointmentData) {
+      await appointmentModel.findByIdAndUpdate(purchase_order_id, {
+        payment: true,
       });
     }
 
@@ -178,16 +111,16 @@ const verifyKhalti = async (req, res) => {
             <meta http-equiv="refresh" content="3;url=${process.env.FRONTEND_URL?.trim().replace(
               /\/$/,
               ""
-            )}/student-courses" />
+            )}/my-appointments" />
           </head>
           <body>
-            <p>Payment successful! Redirecting to your courses page...</p>
+            <p>Payment successful! Redirecting ...</p>
             <script>
               setTimeout(() => {
                 window.location.href = "${process.env.FRONTEND_URL?.trim().replace(
                   /\/$/,
                   ""
-                )}/student-courses";
+                )}/my-appointments";
               }, 3000);
             </script>
           </body>
@@ -208,4 +141,4 @@ const verifyKhalti = async (req, res) => {
   }
 };
 
-module.exports = { initiateKhalti, verifyKhalti };
+export { initiateKhalti, verifyKhalti };
