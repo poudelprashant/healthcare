@@ -35,7 +35,7 @@ import General_physician from './General_physician.svg'
 import Gynecologist from './Gynecologist.svg'
 import Neurologist from './Neurologist.svg'
 import Pediatricians from './Pediatricians.svg'
-
+import khalti_logo from './KhaltiImg.png'
 
 export const assets = {
     appointment_img,
@@ -54,6 +54,7 @@ export const assets = {
     dropdown_icon,
     upload_icon,
     stripe_logo,
+    khalti_logo
 }
 
 export const specialityData = [

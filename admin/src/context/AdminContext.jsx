@@ -13,6 +13,7 @@ const AdminContextProvider = (props) => {
 
     const [appointments, setAppointments] = useState([])
     const [doctors, setDoctors] = useState([])
+    const [packages, setPackages] = useState([])
     const [dashData, setDashData] = useState(false)
 
     // Getting all Doctors data from Database using API
@@ -52,6 +53,24 @@ const AdminContextProvider = (props) => {
     }
 
 
+        // Function to change doctor active status
+        const changeActiveStatus = async (docId) => {
+            try {
+    
+                const { data } = await axios.post(backendUrl + '/api/admin/change-status', { docId }, { headers: { aToken } })
+                if (data.success) {
+                    toast.success(data.message)
+                    getAllDoctors()
+                } else {
+                    toast.error(data.message)
+                }
+    
+            } catch (error) {
+                console.log(error)
+                toast.error(error.message)
+            }
+        }
+    
     // Getting all appointment data from Database using API
     const getAllAppointments = async () => {
 
@@ -111,6 +130,55 @@ const AdminContextProvider = (props) => {
 
     }
 
+    const getAllPackages = async () => {
+        try {
+
+            const { data } = await axios.get(backendUrl + '/api/admin/packages', { headers: { aToken } })
+            if (data.success) {
+                setPackages(data.data)
+            } else {
+                toast.error(data.message)
+            }
+
+        } catch (error) {
+            toast.error(error.message)
+        }
+
+    }
+
+      const changePackageActiveStatus = async (packageId) => {
+            try {
+                
+                const { data } = await axios.post(backendUrl + '/api/admin/change-package-status', { packageId }, { headers: { aToken } })
+                if (data.success) {
+                    toast.success(data.message)
+                    getAllPackages()
+                } else {
+                    toast.error(data.message)
+                }
+    
+            } catch (error) {
+                console.log(error)
+                toast.error(error.message)
+            }
+        }
+
+        const getPackageDetail = async (id) => {
+        try {
+
+            const { data } = await axios.get(backendUrl + `/api/admin/packages/${id}`)
+            if (data.success) {
+                return data.data
+            } else {
+                toast.error(data.message)
+            }
+
+        } catch (error) {
+            console.log(error)
+            toast.error(error.message)
+        }
+
+    }
     const value = {
         aToken, setAToken,
         doctors,
@@ -120,7 +188,12 @@ const AdminContextProvider = (props) => {
         getAllAppointments,
         getDashData,
         cancelAppointment,
-        dashData
+        dashData,
+        changeActiveStatus,
+        getAllPackages,
+        packages,
+        changePackageActiveStatus,
+        getPackageDetail
     }
 
     return (

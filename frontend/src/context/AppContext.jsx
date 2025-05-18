@@ -12,7 +12,23 @@ const AppContextProvider = (props) => {
     const [doctors, setDoctors] = useState([])
     const [token, setToken] = useState(localStorage.getItem('token') ? localStorage.getItem('token') : '')
     const [userData, setUserData] = useState(false)
+    const [packages, setPackages] = useState([])
 
+      const getAllPackages = async () => {
+        try {
+
+            const { data } = await axios.get(backendUrl + '/api/admin/packages')
+            if (data.success) {
+                setPackages(data.data)
+            } else {
+                toast.error(data.message)
+            }
+
+        } catch (error) {
+            toast.error(error.message)
+        }
+
+    }
     // Getting Doctors using API
     const getDoctosData = async () => {
 
@@ -52,8 +68,26 @@ const AppContextProvider = (props) => {
 
     }
 
+    const getPackageDetail = async (id) => {
+        try {
+
+            const { data } = await axios.get(backendUrl + `/api/admin/packages/${id}`)
+            if (data.success) {
+                return data.data
+            } else {
+                toast.error(data.message)
+            }
+
+        } catch (error) {
+            console.log(error)
+            toast.error(error.message)
+        }
+
+    }
+
     useEffect(() => {
         getDoctosData()
+        getAllPackages()
     }, [])
 
     useEffect(() => {
@@ -67,7 +101,10 @@ const AppContextProvider = (props) => {
         currencySymbol,
         backendUrl,
         token, setToken,
-        userData, setUserData, loadUserProfileData
+        userData, setUserData, loadUserProfileData,
+        getAllPackages,
+        packages,
+        getPackageDetail
     }
 
     return (
